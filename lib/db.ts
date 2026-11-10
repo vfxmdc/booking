@@ -154,7 +154,8 @@ function createInitialData(): DBData {
   const bootstrap = process.env.ADMIN_PASSWORD?.trim();
   if (bootstrap) data.staff.push(createStaff(process.env.ADMIN_NAME?.trim() || 'الطبيب', 'SUPER', bootstrap));
 
-  if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO === '1') addDemoData(data);
+  // Sample patients only ever go into the local file, never into a shared Supabase database
+  if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO === '1' && storageKind() === 'file') addDemoData(data);
   return data;
 }
 
