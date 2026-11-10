@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local database (used when running on your own computer)
+/.data/
+
+# keep the example env file
+!.env.example
+
+# old sample data, not used by the app
+/data/
