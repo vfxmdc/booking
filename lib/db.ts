@@ -10,11 +10,13 @@ const SCHEMA = 2;
 
 /**
  * Storage
- * - With SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY: one JSON document in the Supabase table
+ * - With NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SECRET_KEY: one JSON document in the Supabase table
  *   `clinic_db` (row level security on, no policies — only this server can read it).
  * - Otherwise, locally / on a normal server: a JSON file in .data/db.json.
+ * - DATA_FILE=<path> always uses that file, e.g. to try things out without touching Supabase.
  * Writes are serialized per instance and protected across instances with a version check,
  * so two people booking at the same moment can never overwrite each other.
+ * The document is only downloaded again when its version changed, so polling stays cheap.
  */
 
 export type StorageKind = 'supabase' | 'file' | 'unconfigured';
@@ -30,6 +32,7 @@ const supabaseUrl = () => process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SU
 const supabaseSecret = () => process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 export function storageKind(): StorageKind {
+  if (process.env.DATA_FILE) return 'file';
   if (supabaseUrl() && supabaseSecret()) return 'supabase';
   if (process.env.VERCEL) return 'unconfigured'; // Vercel's filesystem is read-only
   return 'file';
@@ -94,6 +97,7 @@ export function defaultSettings(): Settings {
     maxUpcomingPerPatient: 2,
     requireApproval: true,
     timezone: process.env.CLINIC_TIMEZONE || DEFAULT_TZ,
+    retentionWeeks: 1,
   };
 }
 
@@ -343,6 +347,13 @@ function supabase(): SupabaseClient {
   }));
 }
 
+function supabaseError(error: { code?: string; message: string }): Error {
+  if (error.code === 'PGRST205' || error.code === '42P01') {
+    return new Error(`Supabase: table "${TABLE}" not found. Run supabase/schema.sql once in the Supabase SQL Editor.`);
+  }
+  return new Error(`Supabase: ${error.message}`);
+}
+
 /** Thrown when another instance saved first; the caller reloads and tries again. */
 class VersionConflictError extends Error {}
 
@@ -382,13 +393,20 @@ async function load(fresh: boolean, attempt = 0): Promise<Snapshot> {
 
   // Supabase
   if (!fresh && state.cache && Date.now() - state.cache.at < READ_TTL_MS) return state.cache;
-  const { data: row, error } = await supabase().from(TABLE).select('data, version').eq('id', ROW_ID).maybeSingle();
-  if (error) {
-    if (error.code === 'PGRST205' || error.code === '42P01') {
-      throw new Error(`Supabase: table "${TABLE}" not found. Run supabase/schema.sql once in the Supabase SQL Editor.`);
+
+  // Ask for the version only: the whole document is downloaded again just when it changed.
+  // (Dashboards poll every few seconds, so this keeps the Supabase bandwidth use tiny.)
+  if (state.cache) {
+    const { data: head, error: headError } = await supabase().from(TABLE).select('version').eq('id', ROW_ID).maybeSingle();
+    if (headError) throw supabaseError(headError);
+    if (head && Number(head.version) === state.cache.version) {
+      state.cache.at = Date.now();
+      return state.cache;
     }
-    throw new Error(`Supabase: ${error.message}`);
   }
+
+  const { data: row, error } = await supabase().from(TABLE).select('data, version').eq('id', ROW_ID).maybeSingle();
+  if (error) throw supabaseError(error);
 
   if (!row) {
     // First run: create the document
@@ -414,6 +432,46 @@ async function load(fresh: boolean, attempt = 0): Promise<Snapshot> {
   }
   state.cache = { data, version, at: Date.now() };
   return state.cache;
+}
+
+// ---------- side documents ----------
+// Small documents kept next to the main one (the last deleted appointments list). They are never
+// loaded with the main document: in Supabase each is its own row of the same table, locally its own file.
+
+const extraFile = (id: string) => path.join(path.dirname(FILE_PATH), `${id}.json`);
+
+function checkExtraId(id: string) {
+  if (id === ROW_ID || !/^[a-z0-9-]+$/.test(id)) throw new Error(`Invalid document id: ${id}`);
+}
+
+export async function writeExtra(id: string, data: unknown): Promise<void> {
+  checkExtraId(id);
+  const kind = storageKind();
+  if (kind === 'unconfigured') throw new StorageNotConfiguredError();
+  if (kind === 'file') {
+    await fs.mkdir(path.dirname(extraFile(id)), { recursive: true });
+    await fs.writeFile(extraFile(id), JSON.stringify(data), 'utf-8');
+    return;
+  }
+  const { error } = await supabase().from(TABLE).upsert({ id, data, version: 1, updated_at: new Date().toISOString() });
+  if (error) throw supabaseError(error);
+}
+
+export async function readExtra<T>(id: string): Promise<T | null> {
+  checkExtraId(id);
+  const kind = storageKind();
+  if (kind === 'unconfigured') return null;
+  if (kind === 'file') {
+    try {
+      return JSON.parse(await fs.readFile(extraFile(id), 'utf-8')) as T;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') return null;
+      throw error;
+    }
+  }
+  const { data: row, error } = await supabase().from(TABLE).select('data').eq('id', id).maybeSingle();
+  if (error) throw supabaseError(error);
+  return (row?.data as T | undefined) ?? null;
 }
 
 function withLock<T>(fn: () => Promise<T>): Promise<T> {

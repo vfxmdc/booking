@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from 'react';
 import type { AdminUser } from '@/lib/app-config';
-import type { Booking } from '@/lib/types';
+import type { Booking, CleanupRecord } from '@/lib/types';
 
 export type StorageKind = 'supabase' | 'file' | 'unconfigured';
 
@@ -22,6 +22,8 @@ export interface AdminContextValue {
   refresh: () => void;
   /** Online requests waiting for confirmation */
   pending: number;
+  /** The most recent deletion of old appointments, if there was one */
+  lastCleanup: CleanupRecord | null;
   openAppointment: (booking: Booking | string) => void;
   newAppointment: (defaults?: AppointmentDefaults) => void;
   openPatient: (clientId: string) => void;

@@ -86,6 +86,26 @@ export function describeEvent(e: BookingEvent): string {
   }
 }
 
+/** Rows of the Excel (CSV) list of appointments, header first. Used by every appointments download. */
+export function appointmentRows(list: Booking[], nowDateTime: string): (string | number)[][] {
+  return [
+    ['التاريخ', 'الوقت', 'المريض', 'الهاتف', 'الطبيب', 'نوع الزيارة', 'الحالة', 'السعر', 'المصدر', 'سبب الزيارة', 'ملاحظة داخلية'],
+    ...list.map(b => [
+      b.startDateTime.slice(0, 10),
+      timeOf(b.startDateTime),
+      b.clientName,
+      b.clientPhone,
+      b.resourceName,
+      b.serviceName || '',
+      STATE_META[visitState(b, nowDateTime)].label,
+      b.price,
+      b.source === 'CLIENT' ? 'عبر الموقع' : 'العيادة',
+      b.patientNote || '',
+      b.notes || '',
+    ]),
+  ];
+}
+
 /** Ready-to-send WhatsApp text about one appointment. */
 export function appointmentMessage(
   b: Pick<Booking, 'clientName' | 'startDateTime' | 'status'>,

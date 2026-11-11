@@ -64,7 +64,20 @@ export interface Client {
   /** Private notes for the doctor — never sent to the patient */
   notes?: string;
   selfRegistered?: boolean;
+  /** Totals of the visits whose appointments were removed by the weekly cleanup */
+  archived?: ArchivedTotals;
   createdAt: string;
+}
+
+/** What is kept about a patient's appointments after they are deleted. */
+export interface ArchivedTotals {
+  /** Past appointments that were not cancelled and not a no-show */
+  visits: number;
+  noShows: number;
+  /** Sum of the prices of those visits */
+  paid: number;
+  /** Start of the most recent removed past appointment ("YYYY-MM-DDTHH:mm") */
+  lastVisit: string | null;
 }
 
 export interface AvailabilityRule {
@@ -148,6 +161,11 @@ export interface Settings {
   /** Online bookings wait for the clinic to confirm them */
   requireApproval: boolean;
   timezone: string;
+  /**
+   * Weekly cleanup: appointments from before the last N weeks are deleted after a 7-day warning.
+   * 1 keeps the current week only; 0 never deletes.
+   */
+  retentionWeeks: number;
 }
 
 export type StaffRole = 'SUPER' | 'ADMIN';
@@ -197,7 +215,58 @@ export interface DBData {
   blockRules: BlockRule[];
   bookings: Booking[];
   staff: Staff[];
-  meta: { secret: string; createdAt: string; schema?: number };
+  meta: {
+    secret: string;
+    createdAt: string;
+    schema?: number;
+    /** Old appointments announced to the staff and waiting to be deleted */
+    cleanup?: CleanupBatch;
+    lastCleanup?: CleanupRecord;
+  };
+}
+
+/** A batch of old appointments: staff are warned, then it is deleted on `dueOn`. */
+export interface CleanupBatch {
+  /** Appointments dated before this day ("YYYY-MM-DD") are in the batch */
+  before: string;
+  /** Clinic date on which the batch is deleted automatically */
+  dueOn: string;
+  /** ISO timestamp */
+  announcedAt: string;
+  /** Last download of the list by a staff member (ISO timestamp) */
+  downloadedAt?: string;
+  downloadedBy?: string;
+}
+
+/** The most recent deletion of old appointments. */
+export interface CleanupRecord {
+  /** ISO timestamp */
+  at: string;
+  before: string;
+  count: number;
+  /** Staff member's name, or 'auto' for the scheduled deletion */
+  by: string;
+}
+
+/** The deleted appointments themselves, kept until the next cleanup replaces them. */
+export interface CleanupCopy extends CleanupRecord {
+  bookings: Booking[];
+}
+
+/** What staff see about the batch waiting to be deleted. */
+export interface CleanupNotice {
+  before: string;
+  dueOn: string;
+  daysLeft: number;
+  count: number;
+  /** Dates of the first and last appointment in the batch */
+  from: string;
+  to: string;
+  /** Set only while the downloaded list is still up to date */
+  downloadedAt: string | null;
+  downloadedBy: string | null;
+  /** The list was downloaded, but an appointment in it changed afterwards */
+  changedSinceDownload: boolean;
 }
 
 /** A patient action shown to the clinic as a notification. */

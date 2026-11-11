@@ -1,5 +1,6 @@
-import { readDb } from '@/lib/db';
+import { mutateDb, readDb, storageKind, writeExtra } from '@/lib/db';
 import { handle, requireAdmin } from '@/lib/api';
+import { LAST_CLEANUP_DOC, cleanupNotice, planCleanup, runCleanup } from '@/lib/cleanup';
 import { relativeDay, nowIn, timeOf } from '@/lib/date';
 import type { Booking, BookingEvent, FeedEvent } from '@/lib/types';
 
@@ -13,13 +14,28 @@ function legacyEvents(b: Booking, since: string): BookingEvent[] {
   return events;
 }
 
-// GET ?since=ISO → what patients did since then, plus the number of requests waiting for confirmation.
+// GET ?since=ISO → what patients did since then, the number of requests waiting for confirmation,
+// and the old appointments waiting to be deleted.
 export async function GET(req: Request) {
   return handle(async () => {
     await requireAdmin();
-    const db = await readDb();
+    let db = await readDb();
     const since = new URL(req.url).searchParams.get('since') || '';
     const now = nowIn(db.settings.timezone);
+
+    // Weekly cleanup of old appointments. Every open dashboard calls this route, so it doubles as
+    // the scheduler: announce a batch, or delete the one whose 7-day warning has run out.
+    if (storageKind() !== 'unconfigured' && planCleanup(db, now.date)) {
+      try {
+        await mutateDb(draft =>
+          runCleanup(draft, nowIn(draft.settings.timezone).date, copy => writeExtra(LAST_CLEANUP_DOC, copy))
+        );
+        db = await readDb();
+      } catch (error) {
+        console.error('Cleanup of old appointments failed', error);
+      }
+    }
+
     const pending = db.bookings.filter(b => b.status === 'PENDING' && b.endDateTime > now.dateTime).length;
 
     const events: FeedEvent[] = [];
@@ -44,6 +60,12 @@ export async function GET(req: Request) {
       }
     }
     events.sort((a, b) => b.at.localeCompare(a.at));
-    return { serverTime: new Date().toISOString(), pending, events: events.slice(0, 30) };
+    return {
+      serverTime: new Date().toISOString(),
+      pending,
+      events: events.slice(0, 30),
+      cleanup: cleanupNotice(db, now.date),
+      lastCleanup: db.meta.lastCleanup ?? null,
+    };
   });
 }

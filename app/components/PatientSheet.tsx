@@ -100,8 +100,11 @@ function PatientProfile({
   const upcoming = active.filter(b => b.endDateTime > now).sort((a, b) => a.startDateTime.localeCompare(b.startDateTime));
   const past = bookings.filter(b => !upcoming.includes(b));
   const visits = active.filter(b => b.endDateTime <= now && !b.noShow);
-  const noShows = active.filter(b => b.noShow).length;
-  const paid = visits.reduce((sum, b) => sum + (b.price || 0), 0);
+  // Older appointments are deleted by the weekly cleanup; their totals stay on the patient
+  const older = client.archived;
+  const olderCount = older ? older.visits + older.noShows : 0;
+  const noShows = active.filter(b => b.noShow).length + (older?.noShows ?? 0);
+  const paid = visits.reduce((sum, b) => sum + (b.price || 0), 0) + (older?.paid ?? 0);
   const notesDraft = notes ?? client.notes ?? '';
   const notesDirty = notes !== null && notes !== (client.notes ?? '');
   const message = shareText(client, settings?.clinicName, origin);
@@ -251,7 +254,7 @@ function PatientProfile({
 
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
-            { label: 'زيارات', value: visits.length },
+            { label: 'زيارات', value: visits.length + (older?.visits ?? 0) },
             { label: 'قادمة', value: upcoming.length },
             { label: 'لم يحضر', value: noShows },
           ].map(s => (
@@ -321,10 +324,19 @@ function PatientProfile({
           )}
         </section>
 
-        {past.length > 0 && (
+        {(past.length > 0 || olderCount > 0) && (
           <section>
-            <h3 className="text-[13px] font-medium text-secondary px-1 mb-2">السجل ({arCount(past.length, NOUNS.appointment)})</h3>
-            <div className="inset overflow-hidden divide-y divide-hairline">{past.slice(0, 30).map(appointmentRow)}</div>
+            <h3 className="text-[13px] font-medium text-secondary px-1 mb-2">
+              السجل{past.length > 0 ? ` (${arCount(past.length, NOUNS.appointment)})` : ''}
+            </h3>
+            {past.length > 0 && <div className="inset overflow-hidden divide-y divide-hairline">{past.slice(0, 30).map(appointmentRow)}</div>}
+            {olderCount > 0 && (
+              <p className="text-[12.5px] text-tertiary px-1 mt-2 leading-relaxed">
+                + {arCount(olderCount, NOUNS.appointment)} أقدم حُذفت تفاصيلها من السجل
+                {older?.lastVisit ? ` (آخرها ${formatArabicDate(older.lastVisit.slice(0, 10), { day: 'numeric', month: 'long', year: 'numeric' })})` : ''}. تجدها
+                في قوائم المواعيد التي تم تنزيلها.
+              </p>
+            )}
           </section>
         )}
 

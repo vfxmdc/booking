@@ -13,9 +13,16 @@ export async function GET() {
         const visits = db.bookings.filter(b => b.clientId === c.id && b.status !== 'CANCELLED');
         const past = visits.filter(b => b.endDateTime <= now).map(b => b.startDateTime).sort();
         const upcoming = visits.filter(b => b.endDateTime > now).map(b => b.startDateTime).sort();
+        // Visits whose appointments were removed by the weekly cleanup still count
+        const older = c.archived ? c.archived.visits + c.archived.noShows : 0;
         return {
           ...c,
-          stats: { visits: past.length, lastVisit: past.at(-1) ?? null, nextVisit: upcoming[0] ?? null, upcoming: upcoming.length },
+          stats: {
+            visits: past.length + older,
+            lastVisit: past.at(-1) ?? c.archived?.lastVisit ?? null,
+            nextVisit: upcoming[0] ?? null,
+            upcoming: upcoming.length,
+          },
         };
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));

@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { AdminContext, type AdminContextValue, type AppointmentDefaults, type StorageKind } from './admin-context';
+import CleanupBanner, { CLEANUP_SEEN_KEY } from './cleanup-banner';
 import { useApp } from '@/app/context/AppContext';
 import AppointmentSheet, { type AppointmentSheetState } from '@/app/components/AppointmentSheet';
 import PatientSheet, { type PatientSheetState } from '@/app/components/PatientSheet';
@@ -30,9 +31,17 @@ import { Avatar, LoadingScreen, Menu, MenuItem } from '@/app/components/ui';
 import { api, usePolling } from '@/lib/web';
 import { NOUNS, arCount } from '@/lib/date';
 import type { AdminUser, Theme } from '@/lib/app-config';
-import type { Booking, FeedEvent } from '@/lib/types';
+import type { Booking, CleanupNotice, CleanupRecord, FeedEvent } from '@/lib/types';
 
 const LAST_CHECK_KEY = 'clinic_last_check';
+
+interface Feed {
+  serverTime: string;
+  pending: number;
+  events: FeedEvent[];
+  cleanup: CleanupNotice | null;
+  lastCleanup: CleanupRecord | null;
+}
 
 interface NavItem {
   href: string;
@@ -100,6 +109,8 @@ function Workspace({ admin, storage, pathname, children }: { admin: AdminUser; s
   const [pending, setPending] = useState(0);
   const [notifications, setNotifications] = useState<FeedEvent[]>([]);
   const [unread, setUnread] = useState(0);
+  const [cleanup, setCleanup] = useState<CleanupNotice | null>(null);
+  const [lastCleanup, setLastCleanup] = useState<CleanupRecord | null>(null);
   const [appointment, setAppointment] = useState<AppointmentSheetState>(null);
   const [patient, setPatient] = useState<PatientSheetState>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -135,9 +146,29 @@ function Workspace({ admin, storage, pathname, children }: { admin: AdminUser; s
       }
       lastCheck.current ??= new Date(Date.now() - 12 * 3600_000).toISOString();
     }
-    api<{ serverTime: string; pending: number; events: FeedEvent[] }>(`/api/feed?since=${encodeURIComponent(lastCheck.current)}`)
-      .then(({ serverTime, pending, events }) => {
+    api<Feed>(`/api/feed?since=${encodeURIComponent(lastCheck.current)}`)
+      .then(({ serverTime, pending, events, cleanup, lastCleanup }) => {
         setPending(pending);
+        setCleanup(cleanup);
+        setLastCleanup(lastCleanup);
+        // Tell each browser once when old appointments were deleted (by the schedule or by a colleague)
+        try {
+          const stamp = lastCleanup?.at ?? 'none';
+          const seen = localStorage.getItem(CLEANUP_SEEN_KEY);
+          if (seen !== stamp) {
+            localStorage.setItem(CLEANUP_SEEN_KEY, stamp);
+            if (seen !== null && lastCleanup) {
+              const count = arCount(lastCleanup.count, NOUNS.appointment);
+              toast(
+                lastCleanup.by === 'auto' ? `تم حذف المواعيد القديمة تلقائياً (${count})` : `حذف ${lastCleanup.by} المواعيد القديمة (${count})`,
+                'info'
+              );
+              setVersion(v => v + 1);
+            }
+          }
+        } catch {
+          /* storage blocked */
+        }
         const fresh = events.filter(e => !known.current.has(e.id));
         if (fresh.length) {
           fresh.forEach(e => known.current.add(e.id));
@@ -183,8 +214,8 @@ function Workspace({ admin, storage, pathname, children }: { admin: AdminUser; s
   }, [router]);
 
   const value = useMemo<AdminContextValue>(
-    () => ({ admin, isSuper, storage, version, refresh, pending, openAppointment, newAppointment, openPatient, newPatient, openSearch }),
-    [admin, isSuper, storage, version, refresh, pending, openAppointment, newAppointment, openPatient, newPatient, openSearch]
+    () => ({ admin, isSuper, storage, version, refresh, pending, lastCleanup, openAppointment, newAppointment, openPatient, newPatient, openSearch }),
+    [admin, isSuper, storage, version, refresh, pending, lastCleanup, openAppointment, newAppointment, openPatient, newPatient, openSearch]
   );
 
   const nav = navFor(isSuper);
@@ -289,6 +320,8 @@ function Workspace({ admin, storage, pathname, children }: { admin: AdminUser; s
             </div>
           </div>
         )}
+
+        {cleanup && <CleanupBanner notice={cleanup} isSuper={isSuper} onChanged={refresh} />}
 
         <main key={pathname} className="enter flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 pt-1 pb-32 md:pb-14">
           {children}

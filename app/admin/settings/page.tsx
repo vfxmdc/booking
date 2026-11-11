@@ -5,6 +5,7 @@ import { Copy, Download, ExternalLink, Link2, MessageCircle, ShieldCheck } from 
 import type { Settings } from '@/lib/types';
 import { useApp } from '@/app/context/AppContext';
 import { SaveBar, SettingsSection } from '../kit';
+import CleanupSection from './cleanup-section';
 import { ErrorNote, Field } from '@/app/components/ui';
 import { api, copyText, useOrigin, whatsappLink } from '@/lib/web';
 
@@ -134,6 +135,8 @@ export default function ClinicSettingsPage() {
           البيانات محفوظة بشكل خاص، ولا يرى كل مريض إلا مواعيده.
         </p>
       </SettingsSection>
+
+      <CleanupSection />
 
       <SaveBar show={dirty} saving={saving} onSave={save} onDiscard={() => setDraft(null)} />
     </>

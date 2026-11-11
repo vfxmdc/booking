@@ -7,7 +7,7 @@ import type { Booking } from '@/lib/types';
 import { useApp } from '@/app/context/AppContext';
 import { useAdmin } from '../admin-context';
 import { BookingRow, SearchField, matchesQuery, useBookingActions } from '../kit';
-import { STATE_META, visitState } from '@/app/components/status';
+import { appointmentRows } from '@/app/components/status';
 import { Avatar, EmptyState, PageHeader, Segmented, SkeletonList } from '@/app/components/ui';
 import { api, downloadCsv, usePolling } from '@/lib/web';
 import { NOUNS, arCount, formatArabicDate, formatMoney, nowIn, relativeDay, timeOf } from '@/lib/date';
@@ -109,24 +109,7 @@ function Bookings() {
     toast(done === requests.length ? `تم تأكيد ${arCount(done, NOUNS.appointment)}` : `تم تأكيد ${done} من ${requests.length}. حاول مجدداً للباقي.`, done === requests.length ? 'success' : 'error');
   };
 
-  const exportCsv = () => {
-    downloadCsv(`appointments-${now.date}.csv`, [
-      ['التاريخ', 'الوقت', 'المريض', 'الهاتف', 'الطبيب', 'نوع الزيارة', 'الحالة', 'السعر', 'المصدر', 'سبب الزيارة', 'ملاحظة داخلية'],
-      ...list.map(b => [
-        b.startDateTime.slice(0, 10),
-        timeOf(b.startDateTime),
-        b.clientName,
-        b.clientPhone,
-        b.resourceName,
-        b.serviceName || '',
-        STATE_META[visitState(b, now.dateTime)].label,
-        b.price,
-        b.source === 'CLIENT' ? 'عبر الموقع' : 'العيادة',
-        b.patientNote || '',
-        b.notes || '',
-      ]),
-    ]);
-  };
+  const exportCsv = () => downloadCsv(`appointments-${now.date}.csv`, appointmentRows(list, now.dateTime));
 
   const dayLabel = (d: string) => {
     const rel = relativeDay(d, now.date);

@@ -1,6 +1,7 @@
 import { readDb, mutateDb } from '@/lib/db';
 import { handle, readBody, requireSuper, str, int } from '@/lib/api';
 import { activeDoctors, publicDoctor } from '@/lib/availability';
+import { RETENTION_WEEKS } from '@/lib/cleanup';
 import { safeTz } from '@/lib/date';
 
 // Public clinic info used by the home page and the patient booking pages.
@@ -31,6 +32,13 @@ export async function PATCH(req: Request) {
       if (b.maxUpcomingPerPatient !== undefined) s.maxUpcomingPerPatient = int(b.maxUpcomingPerPatient, s.maxUpcomingPerPatient, 1, 20);
       if (b.requireApproval !== undefined) s.requireApproval = Boolean(b.requireApproval);
       if (b.timezone !== undefined) s.timezone = safeTz(str(b.timezone, 60));
+      if (b.retentionWeeks !== undefined) {
+        const weeks = int(b.retentionWeeks, s.retentionWeeks, 0, 520);
+        if (RETENTION_WEEKS.includes(weeks) && weeks !== s.retentionWeeks) {
+          s.retentionWeeks = weeks;
+          delete db.meta.cleanup; // the new rule starts with its own 7-day warning
+        }
+      }
       return s;
     });
     return { settings };

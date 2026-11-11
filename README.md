@@ -55,11 +55,23 @@ Use Vercel's **Pro** plan for a real clinic: the Hobby plan is for non-commercia
 
 **Settings → تنزيل نسخة احتياطية** downloads all patients and appointments as JSON. Do this regularly.
 
+## Weekly cleanup of old appointments
+
+To keep the database small, old appointments are deleted automatically. Patient accounts are never deleted.
+
+- **Settings → حذف المواعيد القديمة** (main admin) sets how long appointments are kept: 1 week (default: only the current week, which starts on Saturday), 1 month, 3 months, 1 year, or never delete.
+- When there are older appointments, every staff account sees a warning for 7 days with a **download** button (Excel/CSV list). The main admin can also delete right away.
+- After the 7 days they are deleted automatically, the next time a staff dashboard is open (there is no cron job).
+- Each patient keeps the totals of the deleted visits (visits, no-shows, amount paid, last visit).
+- The last deleted list stays downloadable in Settings until the next cleanup replaces it.
+
 ## How it works
 
 - Times are stored as clinic wall-clock strings (`YYYY-MM-DDTHH:mm`). "Now" is computed in the clinic timezone (default `Africa/Algiers`), so a UTC server and a local PC behave the same.
 - Every API route checks permissions on the server. Patients only ever see their own appointments, and staff passwords never reach the browser.
 - Writes are serialized and protected with a row version check, so two people booking at the same moment cannot overwrite each other or double-book a slot.
+- The app only downloads the database from Supabase again when its `version` changed. So never edit the `clinic_db` row by hand without also increasing `version`, or the running app will not see the change.
+- To try things out without touching the Supabase data, set `DATA_FILE` (for example `DATA_FILE=.data/test.json`): the app then uses that local file instead.
 - Sessions are signed, httpOnly cookies. Changing a staff password signs that account out everywhere. Regenerating a patient's code signs the patient out.
 
 Main code: `lib/db.ts` (storage), `lib/availability.ts` (slots and rules), `lib/auth.ts` (sessions), `app/api/*` (routes), `app/admin/*` and `app/client/*` (pages).
