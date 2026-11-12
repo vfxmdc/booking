@@ -36,7 +36,7 @@ export async function PATCH(req: Request) {
         const weeks = int(b.retentionWeeks, s.retentionWeeks, 0, 520);
         if (RETENTION_WEEKS.includes(weeks) && weeks !== s.retentionWeeks) {
           s.retentionWeeks = weeks;
-          delete db.meta.cleanup; // the new rule starts with its own 7-day warning
+          delete db.meta.cleanup; // the new rule starts with its own warning
         }
       }
       return s;

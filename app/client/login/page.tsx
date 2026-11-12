@@ -9,10 +9,10 @@ import { ErrorNote, Spinner } from '@/app/components/ui';
 import { usePatient } from '../patient-context';
 import { api, telLink, whatsappLink } from '@/lib/web';
 
-/** "abcd1234" → "ABCD-1234" while typing */
+/** "ab12" → "AB12" while typing (older 8-character codes still fit) */
 function formatCode(value: string): string {
   const raw = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-  return raw.length > 4 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw;
+  return raw;
 }
 
 export default function ClientLoginPage() {
@@ -60,7 +60,7 @@ export default function ClientLoginPage() {
                 autoCapitalize="characters"
                 autoComplete="one-time-code"
                 spellCheck={false}
-                placeholder="ABCD-1234"
+                placeholder="AB12"
                 value={code}
                 onChange={e => {
                   setCode(formatCode(e.target.value));
@@ -72,7 +72,7 @@ export default function ClientLoginPage() {
                 aria-invalid={Boolean(error)}
               />
               <ErrorNote message={error} />
-              <button type="submit" disabled={loading || code.replace('-', '').length < 8} className="btn btn-primary btn-lg w-full">
+              <button type="submit" disabled={loading || code.length < 4} className="btn btn-primary btn-lg w-full">
                 {loading ? <Spinner className="w-5 h-5" /> : 'متابعة'}
               </button>
             </form>

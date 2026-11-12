@@ -27,13 +27,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#edf0f6' },
+    { media: '(prefers-color-scheme: light)', color: '#dfe1ea' },
     { media: '(prefers-color-scheme: dark)', color: '#06080f' },
   ],
 };
 
-// Applies the saved (or system) theme before the first paint, so there is no flash.
-const themeScript = `try{var t=localStorage.getItem('app_theme');if(t!=='dark'&&t!=='light')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.classList.add(t)}catch(e){}`;
+// Applies the saved theme (dark by default) before the first paint, so there is no flash.
+const themeScript = `try{var t=localStorage.getItem('app_theme');if(t!=='dark'&&t!=='light')t='dark';document.documentElement.classList.add(t)}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

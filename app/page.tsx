@@ -16,6 +16,8 @@ import {
   Tag,
 } from 'lucide-react';
 import PublicHeader from './components/PublicHeader';
+import AvailabilityCalendar from './components/AvailabilityCalendar';
+import TiltCard from './components/TiltCard';
 import { readDb } from '@/lib/db';
 import { activeDoctors, generateSlots, nextAvailable, publicDoctor } from '@/lib/availability';
 import { DAY_NAMES, WEEK_ORDER, addDays, dayOfWeek, formatArabicDate, formatDuration, formatMoney, nowIn, relativeDay, toMinutes } from '@/lib/date';
@@ -112,9 +114,10 @@ export default async function Home() {
                 احجز موعداً
                 <ArrowLeft />
               </Link>
-              <Link href="/client/bookings" className="btn btn-glass btn-lg">
-                عرض مواعيدي أو تغييرها
-              </Link>
+              <a href="#availability" className="btn btn-glass btn-lg">
+                <CalendarClock />
+                عرض المواعيد المتاحة
+              </a>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13.5px] text-secondary">
               {['اختر الوقت بنفسك', 'تغيير أو إلغاء بسهولة', 'بياناتك تبقى خاصة'].map(t => (
@@ -127,7 +130,7 @@ export default async function Home() {
           </div>
 
           <div className="enter [animation-delay:120ms]">
-            <div className="card p-6 sm:p-7 relative overflow-hidden">
+            <TiltCard className="card p-6 sm:p-7 relative overflow-hidden">
               <div className="absolute -top-24 -start-24 w-64 h-64 rounded-full bg-accent/20 blur-3xl pointer-events-none" />
               <div className="relative">
                 <div className="flex items-center gap-2 text-[13px] font-semibold text-accent-ink">
@@ -163,8 +166,15 @@ export default async function Home() {
                   <p className="text-[15px] text-secondary mt-3 leading-relaxed">لا توجد أوقات متاحة للحجز عبر الموقع حالياً. يرجى الاتصال بالعيادة.</p>
                 )}
               </div>
-            </div>
+            </TiltCard>
           </div>
+        </section>
+
+        {/* Free times, view only */}
+        <section id="availability" className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 scroll-mt-20">
+          <h2 className="text-[24px] sm:text-[28px] font-bold mb-2">المواعيد المتاحة</h2>
+          <p className="text-[15px] text-secondary mb-6">اطّلع على الأيام والأوقات الفارغة قبل الحجز.</p>
+          <AvailabilityCalendar />
         </section>
 
         {/* Info */}

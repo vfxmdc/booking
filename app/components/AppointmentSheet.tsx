@@ -21,6 +21,7 @@ import {
   CalendarClock,
 } from 'lucide-react';
 import { Sheet, SheetFooter, Field, ErrorNote, Segmented, Avatar, Spinner } from './ui';
+import { DatePicker, Select } from './pickers';
 import { StateBadge, visitState, describeEvent, appointmentMessage } from './status';
 import { useApp } from '@/app/context/AppContext';
 import { api, telLink, whatsappLink } from '@/lib/web';
@@ -724,13 +725,9 @@ function AppointmentForm({
               </button>
             );
           })}
-          <input
-            type="date"
-            aria-label="تاريخ آخر"
-            className="input h-9 w-auto rounded-full text-[14px]"
-            value={date}
-            onChange={e => e.target.value && pickDate(e.target.value)}
-          />
+          <div className="w-56">
+            <DatePicker ariaLabel="تاريخ آخر" className="h-9 rounded-full text-[14px]" value={date} onChange={d => d && pickDate(d)} />
+          </div>
         </div>
       </Field>
 
@@ -755,15 +752,11 @@ function AppointmentForm({
               <input type="time" className="input" value={customTime} onChange={e => setCustomTime(e.target.value)} />
             </Field>
             <Field label="المدة">
-              <select className="input" value={customDuration} onChange={e => setDurationOverride(Number(e.target.value))}>
-                {[...new Set([10, 15, 20, 30, 45, 60, 90, 120, 180, customDuration])]
-                  .sort((a, b) => a - b)
-                  .map(m => (
-                    <option key={m} value={m}>
-                      {formatDuration(m)}
-                    </option>
-                  ))}
-              </select>
+              <Select
+                value={customDuration}
+                onChange={setDurationOverride}
+                options={[...new Set([10, 15, 20, 30, 45, 60, 90, 120, 180, customDuration])].sort((a, b) => a - b).map(m => ({ value: m, label: formatDuration(m) }))}
+              />
             </Field>
             <p className="col-span-2 text-[12.5px] text-tertiary px-1 leading-relaxed">
               لإضافة موعد خارج أوقات العمل، كحالة مستعجلة. لا يُسمح بالتداخل مع موعد آخر.

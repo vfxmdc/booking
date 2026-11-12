@@ -2,7 +2,7 @@ import type { ArchivedTotals, Booking, CleanupCopy, CleanupNotice, CleanupRecord
 import { addDays, daysBetween, startOfWeek } from './date';
 
 /**
- * Weekly cleanup of old appointments (no storage code here, so the browser can import it too).
+ * Monthly (by default) cleanup of old appointments (no storage code here, so the browser can import it too).
  *
  * Appointments from before the kept weeks form a batch. Staff are warned for WARNING_DAYS, with a
  * list to download; then the batch is deleted, by the main admin or automatically on the due date.
@@ -10,7 +10,7 @@ import { addDays, daysBetween, startOfWeek } from './date';
  * There is no cron: the dashboard's feed request runs the next step whenever one is due.
  */
 
-export const WARNING_DAYS = 7;
+export const WARNING_DAYS = 3;
 /** Allowed values of settings.retentionWeeks (0 = never delete). */
 export const RETENTION_WEEKS = [1, 4, 13, 52, 0];
 /** Side document holding the last deleted appointments, until the next cleanup replaces them. */

@@ -7,6 +7,7 @@ import { useApp } from '@/app/context/AppContext';
 import { useAdmin } from '../../admin-context';
 import { SettingsSection } from '../../kit';
 import { ErrorNote, Field, Segmented, Sheet, SheetFooter, Spinner } from '@/app/components/ui';
+import { Select } from '@/app/components/pickers';
 import { api } from '@/lib/web';
 import { formatDuration, formatMoney } from '@/lib/date';
 
@@ -160,15 +161,11 @@ function DoctorForm({ resource, onClose, onSaved }: { resource: Resource | null;
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="مدة الموعد" hint="الفاصل بين المواعيد.">
-            <select className="input" value={slot} onChange={e => setSlot(Number(e.target.value))}>
-              {[...new Set([10, 15, 20, 30, 45, 60, slot])]
-                .sort((a, b) => a - b)
-                .map(m => (
-                  <option key={m} value={m}>
-                    {formatDuration(m)}
-                  </option>
-                ))}
-            </select>
+            <Select
+              value={slot}
+              onChange={setSlot}
+              options={[...new Set([10, 15, 20, 30, 45, 60, slot])].sort((a, b) => a - b).map(m => ({ value: m, label: formatDuration(m) }))}
+            />
           </Field>
           <Field label="سعر الموعد (دج)" hint="عند عدم وجود خدمات.">
             <input type="number" inputMode="numeric" min={0} step={100} className="input" value={price} onChange={e => setPrice(e.target.value)} />

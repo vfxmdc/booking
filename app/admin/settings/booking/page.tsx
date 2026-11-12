@@ -6,6 +6,7 @@ import type { Settings } from '@/lib/types';
 import { useApp } from '@/app/context/AppContext';
 import { SaveBar, SettingsSection } from '../../kit';
 import { ErrorNote } from '@/app/components/ui';
+import { Select } from '@/app/components/pickers';
 import { api } from '@/lib/web';
 import { NOUNS, arCount, formatDuration } from '@/lib/date';
 
@@ -130,18 +131,15 @@ export default function BookingRulesPage() {
                   <div className="text-[15px] font-medium">{rule.label}</div>
                   <div className="text-[12.5px] text-tertiary">{rule.hint}</div>
                 </div>
-                <select
-                  className="input h-10 sm:w-56 shrink-0"
-                  value={value}
-                  onChange={e => set(rule.key, Number(e.target.value))}
-                  aria-label={rule.label}
-                >
-                  {options.map(n => (
-                    <option key={n} value={n}>
-                      {rule.format(n)}
-                    </option>
-                  ))}
-                </select>
+                <div className="sm:w-56 shrink-0">
+                  <Select
+                    className="h-10"
+                    value={value}
+                    onChange={n => set(rule.key, n)}
+                    ariaLabel={rule.label}
+                    options={options.map(n => ({ value: n, label: rule.format(n) }))}
+                  />
+                </div>
               </div>
             );
           })}
@@ -151,7 +149,56 @@ export default function BookingRulesPage() {
         </div>
       </SettingsSection>
 
+      <SessionLengthSection />
+
       <SaveBar show={dirty} saving={saving} onSave={save} onDiscard={() => setDraft(null)} />
     </>
+  );
+}
+
+const LENGTHS = [10, 15, 20, 25, 30, 40, 45, 60];
+
+/** Length of one appointment, i.e. the step between times shown to patients (10:00, 10:30 …). Saved per doctor. */
+function SessionLengthSection() {
+  const { doctors, refreshSettings, toast } = useApp();
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const change = async (id: string, minutes: number) => {
+    setSaving(id);
+    try {
+      await api(`/api/resources/${id}`, { method: 'PATCH', body: { slotDurationMinutes: minutes } });
+      await refreshSettings();
+      toast(`أصبحت مدة الموعد ${formatDuration(minutes)}`);
+    } catch (err) {
+      toast((err as Error).message, 'error');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  if (!doctors.length) return null;
+  return (
+    <SettingsSection
+      title="مدة الموعد"
+      description="الفاصل بين الأوقات المعروضة للحجز. مثلاً 30 دقيقة: 10:00 ثم 10:30، و15 دقيقة: 10:00 ثم 10:15. المواعيد المحجوزة سابقاً لا تتغير."
+    >
+      <div className="inset divide-y divide-hairline">
+        {doctors.map(d => (
+          <div key={d.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-6 px-4 py-3.5">
+            <div className="text-[15px] font-medium">{doctors.length > 1 ? d.name : 'مدة كل موعد'}</div>
+            <div className="sm:w-56 shrink-0">
+              <Select
+                className="h-10"
+                ariaLabel={`مدة الموعد · ${d.name}`}
+                value={d.slotDurationMinutes}
+                disabled={saving === d.id}
+                onChange={m => m !== d.slotDurationMinutes && change(d.id, m)}
+                options={[...new Set([...LENGTHS, d.slotDurationMinutes])].sort((a, b) => a - b).map(m => ({ value: m, label: formatDuration(m) }))}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </SettingsSection>
   );
 }

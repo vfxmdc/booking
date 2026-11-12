@@ -7,6 +7,7 @@ import { useAdmin } from '../admin-context';
 import { SettingsSection } from '../kit';
 import { appointmentRows } from '@/app/components/status';
 import { Field } from '@/app/components/ui';
+import { Select } from '@/app/components/pickers';
 import { api, downloadCsv } from '@/lib/web';
 import { RETENTION_WEEKS, WARNING_DAYS } from '@/lib/cleanup';
 import { NOUNS, arCount, nowIn } from '@/lib/date';
@@ -73,14 +74,15 @@ export default function CleanupSection() {
               : 'بعد الحذف لا تظهر المواعيد الأقدم في التقويم ولا في ملف المريض، وتبقى في القوائم التي تم تنزيلها.'
           }
         >
-          <select className="input" value={weeks} disabled={saving} onChange={e => changeRetention(Number(e.target.value))}>
-            {RETENTION_WEEKS.map(w => (
-              <option key={w} value={w}>
-                {RETENTION_LABEL[w]}
-              </option>
-            ))}
-            {!RETENTION_WEEKS.includes(weeks) && <option value={weeks}>{weeks} أسابيع</option>}
-          </select>
+          <Select
+            value={weeks}
+            disabled={saving}
+            onChange={changeRetention}
+            options={[
+              ...RETENTION_WEEKS.map(w => ({ value: w, label: RETENTION_LABEL[w] })),
+              ...(RETENTION_WEEKS.includes(weeks) ? [] : [{ value: weeks, label: `${weeks} أسابيع` }]),
+            ]}
+          />
         </Field>
       </div>
 

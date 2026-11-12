@@ -7,6 +7,7 @@ import { useApp } from '@/app/context/AppContext';
 import { useAdmin } from '../../admin-context';
 import { SettingsSection } from '../../kit';
 import { EmptyState, ErrorNote, Field, Sheet, SheetFooter, Spinner } from '@/app/components/ui';
+import { Select } from '@/app/components/pickers';
 import { api } from '@/lib/web';
 import { formatDuration, formatMoney } from '@/lib/date';
 
@@ -143,13 +144,11 @@ function ServiceForm({ service, defaultLength, onClose, onSaved }: { service: Se
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="المدة">
-            <select className="input" value={duration} onChange={e => setDuration(Number(e.target.value))}>
-              {durations.map(m => (
-                <option key={m} value={m}>
-                  {m === 0 ? `المدة العادية (${formatDuration(defaultLength)})` : formatDuration(m)}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={duration}
+              onChange={setDuration}
+              options={durations.map(m => ({ value: m, label: m === 0 ? `المدة العادية (${formatDuration(defaultLength)})` : formatDuration(m) }))}
+            />
           </Field>
           <Field label="السعر (دج)">
             <input type="number" inputMode="numeric" min={0} step={100} className="input" value={price} onChange={e => setPrice(e.target.value)} />
@@ -157,14 +156,7 @@ function ServiceForm({ service, defaultLength, onClose, onSaved }: { service: Se
         </div>
         {doctors.length > 1 && (
           <Field label="الطبيب">
-            <select className="input" value={resourceId} onChange={e => setResourceId(e.target.value)}>
-              <option value="">كل الأطباء</option>
-              {doctors.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            <Select value={resourceId} onChange={setResourceId} options={[{ value: '', label: 'كل الأطباء' }, ...doctors.map(d => ({ value: d.id, label: d.name }))]} />
           </Field>
         )}
         <ErrorNote message={error} />

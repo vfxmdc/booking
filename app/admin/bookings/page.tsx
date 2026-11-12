@@ -9,6 +9,7 @@ import { useAdmin } from '../admin-context';
 import { BookingRow, SearchField, matchesQuery, useBookingActions } from '../kit';
 import { appointmentRows } from '@/app/components/status';
 import { Avatar, EmptyState, PageHeader, Segmented, SkeletonList } from '@/app/components/ui';
+import { Select } from '@/app/components/pickers';
 import { api, downloadCsv, usePolling } from '@/lib/web';
 import { NOUNS, arCount, formatArabicDate, formatMoney, nowIn, relativeDay, timeOf } from '@/lib/date';
 
@@ -154,14 +155,9 @@ function Bookings() {
         />
         <div className="flex items-center gap-2">
           {doctors.length > 1 && (
-            <select className="input h-10 rounded-full w-auto text-[14px]" value={resourceId} onChange={e => setResourceId(e.target.value)} aria-label="الطبيب">
-              <option value="ALL">كل الأطباء</option>
-              {doctors.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-44 shrink-0">
+              <Select className="h-10 rounded-full text-[14px]" ariaLabel="الطبيب" value={resourceId} onChange={setResourceId} options={[{ value: 'ALL', label: 'كل الأطباء' }, ...doctors.map(d => ({ value: d.id, label: d.name }))]} />
+            </div>
           )}
           <SearchField value={query} onChange={setQuery} placeholder="ابحث بالاسم أو الهاتف أو الخدمة" className="flex-1 lg:w-72" />
         </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { Sheet, SheetFooter, Field, ErrorNote, Segmented, Spinner } from './ui';
+import { DatePicker, Select } from './pickers';
 import { useApp } from '@/app/context/AppContext';
 import { api } from '@/lib/web';
 import { todayIn } from '@/lib/date';
@@ -79,30 +80,23 @@ function BlockForm({ onClose, onSaved }: Props) {
 
         {doctors.length > 1 && (
           <Field label="ينطبق على">
-            <select className="input" value={resourceId} onChange={e => setResourceId(e.target.value)}>
-              <option value="ALL">كل الأطباء</option>
-              {doctors.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            <Select value={resourceId} onChange={setResourceId} options={[{ value: 'ALL', label: 'كل الأطباء' }, ...doctors.map(d => ({ value: d.id, label: d.name }))]} />
           </Field>
         )}
 
         {mode === 'DAYS' ? (
           <div className="grid grid-cols-2 gap-3">
             <Field label="من">
-              <input type="date" className="input" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <DatePicker value={startDate} onChange={setStartDate} />
             </Field>
             <Field label="إلى">
-              <input type="date" className="input" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} />
+              <DatePicker value={endDate} min={startDate} onChange={setEndDate} />
             </Field>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3">
             <Field label="اليوم">
-              <input type="date" className="input" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <DatePicker value={startDate} onChange={setStartDate} />
             </Field>
             <Field label="من">
               <input type="time" className="input" value={startTime} onChange={e => setStartTime(e.target.value)} />

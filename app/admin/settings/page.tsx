@@ -7,6 +7,7 @@ import { useApp } from '@/app/context/AppContext';
 import { SaveBar, SettingsSection } from '../kit';
 import CleanupSection from './cleanup-section';
 import { ErrorNote, Field } from '@/app/components/ui';
+import { Select } from '@/app/components/pickers';
 import { api, copyText, useOrigin, whatsappLink } from '@/lib/web';
 
 const TIMEZONES = [
@@ -95,14 +96,14 @@ export default function ClinicSettingsPage() {
             <input className="input" type="tel" inputMode="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="0550 00 00 00" />
           </Field>
           <Field label="المنطقة الزمنية">
-            <select className="input" value={form.timezone} onChange={e => set('timezone', e.target.value)}>
-              {TIMEZONES.map(([tz, label]) => (
-                <option key={tz} value={tz}>
-                  {label}
-                </option>
-              ))}
-              {!TIMEZONES.some(([tz]) => tz === form.timezone) && <option value={form.timezone}>{form.timezone}</option>}
-            </select>
+            <Select
+              value={form.timezone}
+              onChange={v => set('timezone', v)}
+              options={[
+                ...TIMEZONES.map(([tz, label]) => ({ value: tz, label })),
+                ...(TIMEZONES.some(([tz]) => tz === form.timezone) ? [] : [{ value: form.timezone, label: form.timezone }]),
+              ]}
+            />
           </Field>
           <div className="sm:col-span-2">
             <Field label="العنوان" hint="يظهر مع رابط «فتح في الخرائط».">

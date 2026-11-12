@@ -66,11 +66,11 @@ export function generateAccessCode(existing: string[]): string {
   for (;;) {
     let letters = '';
     let digits = '';
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       letters += CODE_LETTERS[crypto.randomInt(CODE_LETTERS.length)];
       digits += crypto.randomInt(10);
     }
-    const code = `${letters}-${digits}`;
+    const code = `${letters}${digits}`;
     if (!taken.has(canonCode(code))) return code;
   }
 }
@@ -95,9 +95,9 @@ export function defaultSettings(): Settings {
     minNoticeMinutes: 60,
     cancelNoticeHours: 2,
     maxUpcomingPerPatient: 2,
-    requireApproval: true,
+    requireApproval: false,
     timezone: process.env.CLINIC_TIMEZONE || DEFAULT_TZ,
-    retentionWeeks: 1,
+    retentionWeeks: 4,
   };
 }
 

@@ -58,7 +58,7 @@ const TONE_ICON = {
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const theme = useSyncExternalStore(subscribeTheme, readTheme, (): Theme => 'light');
+  const theme = useSyncExternalStore(subscribeTheme, readTheme, (): Theme => 'dark');
   const [settings, setSettings] = useState<Settings | null>(null);
   const [doctors, setDoctors] = useState<PublicDoctor[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
