@@ -54,6 +54,8 @@ export default function AvailabilityCalendar() {
   const days = summary?.key === monthKey ? summary.days : null;
   const loadingDay = !day || day.key !== dayKey;
   const free = loadingDay ? [] : day.slots.filter(s => s.isAvailable);
+  // Free and booked times; past and closed (blocked) times are left out
+  const shown = loadingDay ? [] : day.slots.filter(s => s.isAvailable || s.reason === 'BOOKED');
   const canPrev = month > today.slice(0, 7);
   const canNext = month < lastDay.slice(0, 7);
 
@@ -66,8 +68,15 @@ export default function AvailabilityCalendar() {
         </p>
         <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
           {list.map(s => (
-            <span key={s.start} className="h-10 rounded-xl bg-[var(--input)] border border-hairline flex items-center justify-center text-[14.5px] font-semibold tnum">
-              {s.startTimeStr}
+            <span
+              key={s.start}
+              title={s.isAvailable ? 'متاح' : 'محجوز'}
+              className={`h-10 rounded-xl flex flex-col items-center justify-center leading-none tnum ${
+                s.isAvailable ? 'bg-[var(--input)] border border-hairline text-[14.5px] font-semibold' : 'bg-fill text-tertiary text-[13px] font-medium'
+              }`}
+            >
+              <span className={s.isAvailable ? '' : 'line-through'}>{s.startTimeStr}</span>
+              {!s.isAvailable && <span className="text-[9.5px] mt-0.5 text-danger-ink/80">محجوز</span>}
             </span>
           ))}
         </div>
@@ -155,7 +164,7 @@ export default function AvailabilityCalendar() {
               <div key={i} className="skeleton h-10 rounded-xl" />
             ))}
           </div>
-        ) : free.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="py-10 text-center">
             <CalendarX2 className="w-9 h-9 text-tertiary mx-auto" />
             <p className="mt-2 text-secondary text-[15px]">
@@ -163,13 +172,13 @@ export default function AvailabilityCalendar() {
                 ? 'العيادة مغلقة في هذا اليوم.'
                 : day.status === 'HOLIDAY'
                   ? `العيادة مغلقة: ${day.holiday || 'عطلة'}.`
-                  : 'لا توجد أوقات متاحة في هذا اليوم.'}
+                  : 'لا توجد أوقات في هذا اليوم.'}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {group('صباحاً', <Sun className="w-3.5 h-3.5" />, free.filter(s => s.startTimeStr < '12:00'))}
-            {group('مساءً', <Moon className="w-3.5 h-3.5" />, free.filter(s => s.startTimeStr >= '12:00'))}
+            {group('صباحاً', <Sun className="w-3.5 h-3.5" />, shown.filter(s => s.startTimeStr < '12:00'))}
+            {group('مساءً', <Moon className="w-3.5 h-3.5" />, shown.filter(s => s.startTimeStr >= '12:00'))}
           </div>
         )}
         <p className="text-[12.5px] text-tertiary mt-5 leading-relaxed">هذه الأوقات للاطلاع فقط. للحجز ادخل برمز الدخول الخاص بك.</p>
