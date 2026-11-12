@@ -3,7 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
 const MAX_TILT = 18; // degrees, when following the mouse
-const IDLE_TILT = 9; // degrees, gentle automatic sway
+const IDLE_TILT = 12; // degrees, gentle automatic sway
 
 /**
  * 3D tilt wrapper: sways on its own, and follows the mouse while hovered.
@@ -25,8 +25,8 @@ export default function TiltCard({ children, className = '' }: { children: React
       const t = (now - start) / 1000;
       const goal = target
         ? { x: target.x, y: target.y, s: 1.03 }
-        : { x: Math.sin(t * 0.8) * IDLE_TILT * 0.6, y: Math.cos(t * 0.6) * IDLE_TILT, s: 1 };
-      const k = target ? 0.18 : 0.05;
+        : { x: Math.sin(t * 1.6) * IDLE_TILT * 0.6, y: Math.cos(t * 1.2) * IDLE_TILT, s: 1 };
+      const k = target ? 0.18 : 0.1;
       cur = { x: cur.x + (goal.x - cur.x) * k, y: cur.y + (goal.y - cur.y) * k, s: cur.s + (goal.s - cur.s) * k };
       el.style.transform = `perspective(1000px) rotateX(${cur.x}deg) rotateY(${cur.y}deg) scale3d(${cur.s}, ${cur.s}, ${cur.s})`;
       frame = requestAnimationFrame(loop);
